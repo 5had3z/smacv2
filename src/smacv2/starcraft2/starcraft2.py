@@ -107,7 +107,6 @@ class StarCraft2Env(MultiAgentEnv):
         window_size_y=1200,
         heuristic_ai=False,
         heuristic_rest=False,
-        debug=False,
         prob_obs_enemy=1.0,
         action_mask=True,
     ):
@@ -296,7 +295,6 @@ class StarCraft2Env(MultiAgentEnv):
         self._seed = seed
         self.heuristic_ai = heuristic_ai
         self.heuristic_rest = heuristic_rest
-        self.debug = debug
         self.window_size = (window_size_x, window_size_y)
         self.replay_dir = replay_dir
         self.replay_prefix = replay_prefix
@@ -357,7 +355,7 @@ class StarCraft2Env(MultiAgentEnv):
             self.capability_attr_names += ["total_health"]
         if self.unit_type_bits > 0:
             bit_attr_names = [
-                "type_{}".format(bit) for bit in range(self.unit_type_bits)
+                f"type_{bit}" for bit in range(self.unit_type_bits)
             ]
             self.capability_attr_names += bit_attr_names
             self.enemy_state_attr_names += bit_attr_names
@@ -415,20 +413,18 @@ class StarCraft2Env(MultiAgentEnv):
         self._sc2_proc = None
         self._controller = None
         # Try to avoid leaking SC2 processes on shutdown
-        atexit.register(lambda: self.close())
+        atexit.register(self.close)
 
     def _only_one_meta_marl_flag_on(self):
         """Function that checks that either all the meta marl flags are off,
         or at most one has been enabled."""
         if self.stochastic_attack:
             return not self.stochastic_health and not self.replace_teammates
-        else:
-            return not self.replace_teammates or not self.stochastic_health
+        return not self.stochastic_health or not self.replace_teammates
 
     def _launch(self):
         """Launch the StarCraft II game."""
         self._run_config = run_configs.get(version=self.game_version)
-        self.version = self._run_config.version
         _map = maps.get(self.map_name)
 
         # Setting up the interface
@@ -455,21 +451,18 @@ class StarCraft2Env(MultiAgentEnv):
         )
         self._controller.create_game(create)
 
-        self.game = sc_pb.RequestJoinGame(
+        join = sc_pb.RequestJoinGame(
             race=races[self._agent_race], options=interface_options
         )
-        join = self.game
         self._controller.join_game(join)
 
         game_info = self._controller.game_info()
         map_info = game_info.start_raw
-        self.map_play_area_min = map_info.playable_area.p0
-        self.map_play_area_max = map_info.playable_area.p1
         self.max_distance_x = (
-            self.map_play_area_max.x - self.map_play_area_min.x
+            map_info.playable_area.p1.x - map_info.playable_area.p0.x
         )
         self.max_distance_y = (
-            self.map_play_area_max.y - self.map_play_area_min.y
+            map_info.playable_area.p1.y - map_info.playable_area.p0.y
         )
         self.map_x = map_info.map_size.x
         self.map_y = map_info.map_size.y
@@ -552,11 +545,10 @@ class StarCraft2Env(MultiAgentEnv):
         self.previous_enemy_units = None
         self.win_counted = False
         self.defeat_counted = False
-        if self.debug:
-            logging.debug(
-                f"Attack Probabilities: {self.agent_attack_probabilities}"
-            )
-            logging.debug(f"Health Levels: {self.agent_health_levels}")
+        logging.debug(
+            f"Attack Probabilities: {self.agent_attack_probabilities}"
+        )
+        logging.debug(f"Health Levels: {self.agent_health_levels}")
         self.last_action = np.zeros((self.n_agents, self.n_actions))
 
         if self.heuristic_ai:
@@ -570,12 +562,9 @@ class StarCraft2Env(MultiAgentEnv):
         except (protocol.ProtocolError, protocol.ConnectionError):
             self.full_restart()
 
-        if self.debug:
-            logging.debug(
-                "Started Episode {}".format(self._episode_count).center(
-                    60, "*"
-                )
-            )
+        logging.debug(
+            "Started Episode {}".format(self._episode_count).center(60, "*")
+        )
         return self.get_obs(), self.get_state()
 
     def _restart(self):
@@ -612,8 +601,7 @@ class StarCraft2Env(MultiAgentEnv):
 
         # Collect individual actions
         sc_actions = []
-        if self.debug:
-            logging.debug("Actions".center(60, "-"))
+        logging.debug("Actions".center(60, "-"))
 
         for a_id, action in enumerate(actions_int):
             if not self.heuristic_ai:
@@ -703,8 +691,7 @@ class StarCraft2Env(MultiAgentEnv):
             self.battles_game += 1
             self.timeouts += 1
 
-        if self.debug:
-            logging.debug("Reward = {}".format(reward).center(60, "-"))
+        logging.debug("Reward = {}".format(reward).center(60, "-"))
 
         if terminated:
             self._episode_count += 1
@@ -731,8 +718,7 @@ class StarCraft2Env(MultiAgentEnv):
         if action == 0:
             # no-op (valid only when dead)
             assert unit.health == 0, "No-op only available for dead agents."
-            if self.debug:
-                logging.debug("Agent {}: Dead".format(a_id))
+            logging.debug("Agent {}: Dead".format(a_id))
             return None
         elif action == 1:
             # stop
@@ -741,8 +727,7 @@ class StarCraft2Env(MultiAgentEnv):
                 unit_tags=[tag],
                 queue_command=False,
             )
-            if self.debug:
-                logging.debug("Agent {}: Stop".format(a_id))
+            logging.debug("Agent {}: Stop".format(a_id))
 
         elif action == 2:
             # move north
@@ -757,8 +742,7 @@ class StarCraft2Env(MultiAgentEnv):
             self.new_unit_positions[a_id] = np.array(
                 [x, y + self._move_amount]
             )
-            if self.debug:
-                logging.debug("Agent {}: Move North".format(a_id))
+            logging.debug("Agent {}: Move North".format(a_id))
 
         elif action == 3:
             # move south
@@ -773,8 +757,7 @@ class StarCraft2Env(MultiAgentEnv):
             self.new_unit_positions[a_id] = np.array(
                 [x, y - self._move_amount]
             )
-            if self.debug:
-                logging.debug("Agent {}: Move South".format(a_id))
+            logging.debug("Agent {}: Move South".format(a_id))
 
         elif action == 4:
             # move east
@@ -790,8 +773,7 @@ class StarCraft2Env(MultiAgentEnv):
                 [x + self._move_amount, y]
             )
 
-            if self.debug:
-                logging.debug("Agent {}: Move East".format(a_id))
+            logging.debug("Agent {}: Move East".format(a_id))
 
         elif action == 5:
             # move west
@@ -806,8 +788,7 @@ class StarCraft2Env(MultiAgentEnv):
             self.new_unit_positions[a_id] = np.array(
                 [x - self._move_amount, y]
             )
-            if self.debug:
-                logging.debug("Agent {}: Move West".format(a_id))
+            logging.debug("Agent {}: Move West".format(a_id))
 
         elif self.conic_fov and action in range(6, 6 + self.n_fov_actions):
             self.fov_directions[a_id] = self.canonical_fov_directions[
@@ -831,10 +812,9 @@ class StarCraft2Env(MultiAgentEnv):
             if self.stochastic_attack:
                 p = np.random.default_rng().uniform()
                 if p > self.agent_attack_probabilities[a_id]:
-                    if self.debug:
-                        logging.debug(
-                            f"Agent {a_id} {action_name}s {target_id}, but fails"
-                        )
+                    logging.debug(
+                        f"Agent {a_id} {action_name}s {target_id}, but fails"
+                    )
                     return None
             action_id = actions[action_name]
             target_tag = target_unit.tag
@@ -852,12 +832,9 @@ class StarCraft2Env(MultiAgentEnv):
             else:
                 return None
 
-            if self.debug:
-                logging.debug(
-                    "Agent {} {}s unit # {}".format(
-                        a_id, action_name, target_id
-                    )
-                )
+            logging.debug(
+                "Agent {} {}s unit # {}".format(a_id, action_name, target_id)
+            )
         if cmd:
             sc_action = sc_pb.Action(
                 action_raw=r_pb.ActionRaw(unit_command=cmd)
@@ -1435,17 +1412,17 @@ class StarCraft2Env(MultiAgentEnv):
         ]
         return lines
 
-    def is_position_in_cone(self, agent_id, pos, range="sight_range"):
+    def is_position_in_cone(self, agent_id, pos, range_type="sight_range"):
         ally_pos = self.get_unit_by_id(agent_id).pos
         distance = self.distance(ally_pos.x, ally_pos.y, pos.x, pos.y)
         # position is in this agent's cone if it is not outside the sight
         # range and has the correct angle
-        if range == "sight_range":
+        if range_type == "sight_range":
             unit_range = self.unit_sight_range(agent_id)
-        elif range == "shoot_range":
+        elif range_type == "shoot_range":
             unit_range = self.unit_shoot_range(agent_id)
         else:
-            raise Exception("Range argument not recognised")
+            raise KeyError("Range argument not recognised")
         if distance > unit_range:
             return False
         x_diff = pos.x - ally_pos.x
@@ -1699,17 +1676,14 @@ class StarCraft2Env(MultiAgentEnv):
                 agent_obs = np.zeros(1, dtype=np.float32)
                 agent_obs[:] = self._episode_steps / self.episode_limit
 
-        if self.debug:
-            logging.debug("Obs Agent: {}".format(agent_id).center(60, "-"))
-            logging.debug(
-                "Avail. actions {}".format(
-                    self.get_avail_agent_actions(agent_id)
-                )
-            )
-            logging.debug("Move feats {}".format(move_feats))
-            logging.debug("Enemy feats {}".format(enemy_feats))
-            logging.debug("Ally feats {}".format(ally_feats))
-            logging.debug("Own feats {}".format(own_feats))
+        logging.debug("Obs Agent: {}".format(agent_id).center(60, "-"))
+        logging.debug(
+            "Avail. actions {}".format(self.get_avail_agent_actions(agent_id))
+        )
+        logging.debug("Move feats {}".format(move_feats))
+        logging.debug("Enemy feats {}".format(enemy_feats))
+        logging.debug("Ally feats {}".format(ally_feats))
+        logging.debug("Own feats {}".format(own_feats))
 
         return agent_obs
 
@@ -1774,12 +1748,11 @@ class StarCraft2Env(MultiAgentEnv):
 
         state = state.astype(dtype=np.float32)
 
-        if self.debug:
-            logging.debug("STATE".center(60, "-"))
-            logging.debug("Ally state {}".format(state_dict["allies"]))
-            logging.debug("Enemy state {}".format(state_dict["enemies"]))
-            if self.state_last_action:
-                logging.debug("Last actions {}".format(self.last_action))
+        logging.debug("STATE".center(60, "-"))
+        logging.debug("Ally state {}".format(state_dict["allies"]))
+        logging.debug("Enemy state {}".format(state_dict["enemies"]))
+        if self.state_last_action:
+            logging.debug("Last actions {}".format(self.last_action))
 
         return state
 
@@ -2166,7 +2139,7 @@ class StarCraft2Env(MultiAgentEnv):
                             dist <= shoot_range
                             if not self.conic_fov
                             else self.is_position_in_cone(
-                                agent_id, t_unit.pos, range="shoot_range"
+                                agent_id, t_unit.pos, range_type="shoot_range"
                             )
                         )
 
@@ -2188,7 +2161,7 @@ class StarCraft2Env(MultiAgentEnv):
             dist <= shoot_range
             if not self.conic_fov
             else self.is_position_in_cone(
-                agent_id, t_unit.pos, range="shoot_range"
+                agent_id, t_unit.pos, range_type="shoot_range"
             )
         )
         return can_shoot
@@ -2243,7 +2216,7 @@ class StarCraft2Env(MultiAgentEnv):
                         dist <= shoot_range
                         if not self.conic_fov
                         else self.is_position_in_cone(
-                            agent_id, t_unit.pos, range="shoot_range"
+                            agent_id, t_unit.pos, range_type="shoot_range"
                         )
                     )
 
@@ -2386,17 +2359,12 @@ class StarCraft2Env(MultiAgentEnv):
                 reverse=False,
             )
 
-            for i in range(len(ally_units_sorted)):
-                self.agents[i] = ally_units_sorted[i]
-                if self.debug:
-                    logging.debug(
-                        "Unit {} is {}, x = {}, y = {}".format(
-                            len(self.agents),
-                            self.agents[i].unit_type,
-                            self.agents[i].pos.x,
-                            self.agents[i].pos.y,
-                        )
-                    )
+            for i, ally_unit in enumerate(ally_units_sorted):
+                self.agents[i] = ally_unit
+                logging.debug(
+                    f"Unit {len(self.agents)} is {ally_unit.unit_type}, "
+                    f"x = {ally_unit.pos.x}, y = {ally_unit.pos.y}"
+                )
 
             for unit in self._obs.observation.raw_data.units:
                 if unit.owner == 2:
