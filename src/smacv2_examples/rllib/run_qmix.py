@@ -6,13 +6,12 @@ RLlib QMIX are different from pymarl's QMIX.
 """
 
 import argparse
-from gym.spaces import Tuple
 
 import ray
-from ray.tune import run_experiments, register_env
+from gym.spaces import Tuple
+from ray.tune import register_env, run_experiments
 
 from smacv2_examples.rllib.env import RLlibStarCraft2Env
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

@@ -1,5 +1,7 @@
 import random
+
 import numpy as np
+
 from smacv2.pettingzoo import StarCraft2PZEnv
 
 

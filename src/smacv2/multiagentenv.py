@@ -1,4 +1,6 @@
-class MultiAgentEnv(object):
+class MultiAgentEnv:
+    """API Definition of MutliAgentEnvironment"""
+
     def step(self, actions):
         """Returns reward, terminated, info."""
         raise NotImplementedError

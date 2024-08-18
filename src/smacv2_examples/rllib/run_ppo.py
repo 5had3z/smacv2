@@ -9,12 +9,11 @@ Increase the level of parallelism by changing --num-workers.
 import argparse
 
 import ray
-from ray.tune import run_experiments, register_env
 from ray.rllib.models import ModelCatalog
+from ray.tune import register_env, run_experiments
 
 from smacv2_examples.rllib.env import RLlibStarCraft2Env
 from smacv2_examples.rllib.model import MaskedActionsModel
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

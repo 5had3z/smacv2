@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
-from smacv2.starcraft2.maps import smac_maps
 from pysc2 import maps as pysc2_maps
+
+from smacv2.starcraft2.maps import smac_maps
 
 
 def main():

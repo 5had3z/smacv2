@@ -1,5 +1,4 @@
 import tensorflow as tf
-
 from ray.rllib.models import Model
 from ray.rllib.models.tf.misc import normc_initializer
 

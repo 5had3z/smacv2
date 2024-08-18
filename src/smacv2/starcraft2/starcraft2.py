@@ -1,7 +1,6 @@
 import atexit
 import enum
 import math
-import random
 from copy import deepcopy
 from operator import attrgetter
 from warnings import warn
@@ -109,7 +108,6 @@ class StarCraft2Env(MultiAgentEnv):
         heuristic_rest=False,
         prob_obs_enemy=1.0,
         action_mask=True,
-        unit_features: list[str] | None = None,
     ):
         """
         Create a StarCraftC2Env environment.
@@ -507,12 +505,12 @@ class StarCraft2Env(MultiAgentEnv):
             / 255
         )
 
-    def reset(self, episode_config={}):
+    def reset(self, episode_config= None):
         """Reset the environment. Required after each full episode.
         Returns initial observations and states.
         """
         self._episode_steps = 0
-        self.episode_config = episode_config
+        self.episode_config = {} if episode_config is None else episode_config
         if self._episode_count == 0:
             # Launch StarCraft II
             self._launch()
@@ -1535,13 +1533,12 @@ class StarCraft2Env(MultiAgentEnv):
                     if self.obs_all_health and show_enemy:
                         enemy_feats[e_id, ind] = (
                             e_unit.health / e_unit.health_max
-                        )  # health
+                        )
                         ind += 1
                         if self.shield_bits_enemy > 0:
-                            max_shield = self.unit_max_shield(e_unit)
                             enemy_feats[e_id, ind] = (
-                                e_unit.shield / max_shield
-                            )  # shield
+                                e_unit.shield / self.unit_max_shield(e_unit)
+                            )
                             ind += 1
 
                     if self.unit_type_bits > 0 and show_enemy:

@@ -1,9 +1,7 @@
 import random
 
 import numpy as np
-
-from gym.spaces import Discrete, Box, Dict
-
+from gym.spaces import Box, Dict, Discrete
 from ray import rllib
 
 from smacv2 import StarCraft2Env

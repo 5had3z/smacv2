@@ -2,6 +2,7 @@ import time
 
 import numpy as np
 from absl import logging
+
 from smacv2 import StarCraft2Env
 from smacv2.starcraft2.wrapper import StarCraftCapabilityEnvWrapper
 
