@@ -109,6 +109,7 @@ class StarCraft2Env(MultiAgentEnv):
         heuristic_rest=False,
         prob_obs_enemy=1.0,
         action_mask=True,
+        unit_features: list[str] | None = None,
     ):
         """
         Create a StarCraftC2Env environment.
@@ -1294,10 +1295,7 @@ class StarCraft2Env(MultiAgentEnv):
         else:
             x, y = int(unit.pos.x - m), int(unit.pos.y)
 
-        if self.check_bounds(x, y) and self.pathing_grid[x, y]:
-            return True
-
-        return False
+        return self.check_bounds(x, y) and self.pathing_grid[x, y]
 
     def get_surrounding_points(self, unit, include_self=False):
         """Returns the surrounding points of the unit in 8 directions."""
@@ -1507,15 +1505,15 @@ class StarCraft2Env(MultiAgentEnv):
                     if self.conic_fov
                     else dist < sight_range
                 )
-                if enemy_visible:
-                    if self.enemy_tags[e_id] is None:
-                        self.obs_enemies[e_id, agent_id] = 1
-                        self.enemy_tags[e_id] = agent_id
-                        for a_id in range(self.n_agents):
-                            if a_id != agent_id:
-                                draw = np.random.rand()
-                                if draw < self.prob_obs_enemy:
-                                    self.obs_enemies[e_id, a_id] = 1
+                if enemy_visible and self.enemy_tags[e_id] is None:
+                    self.obs_enemies[e_id, agent_id] = 1
+                    self.enemy_tags[e_id] = agent_id
+                    for a_id in range(self.n_agents):
+                        if (
+                            a_id != agent_id
+                            and np.random.rand() < self.prob_obs_enemy
+                        ):
+                            self.obs_enemies[e_id, a_id] = 1
                 if self.obs_enemies[e_id, agent_id] == 0:
                     enemy_visible = False
                 if (enemy_visible and e_unit.health > 0) or (
@@ -1525,13 +1523,10 @@ class StarCraft2Env(MultiAgentEnv):
                     enemy_feats[e_id, 0] = true_avail_actions[
                         self.n_actions_no_attack + e_id
                     ]  # available
-                    enemy_feats[e_id, 1] = dist / sight_range  # distance
-                    enemy_feats[e_id, 2] = (
-                        e_x - x
-                    ) / sight_range  # relative X
-                    enemy_feats[e_id, 3] = (
-                        e_y - y
-                    ) / sight_range  # relative Y
+                    enemy_feats[e_id, 1] = dist  # distance
+                    enemy_feats[e_id, 2] = e_x - x  # relative X
+                    enemy_feats[e_id, 3] = e_y - y  # relative Y
+                    enemy_feats[e_id, 1:4] /= sight_range
                     show_enemy = (
                         self.mask_enemies
                         and not self.enemy_mask[agent_id][e_id]
@@ -1693,14 +1688,10 @@ class StarCraft2Env(MultiAgentEnv):
         NOTE: Agents should have access only to their local observations
         during decentralised execution.
         """
-        agents = list(range(self.n_agents))
-        random.shuffle(agents)
-        agents_obs = [None for i in range(len(agents))]
-        for agent in agents:
-            agents_obs[agent] = self.get_obs_agent(
-                agent, fully_observable=self.fully_observable
-            )
-        return agents_obs
+        return [
+            self.get_obs_agent(i, fully_observable=self.fully_observable)
+            for i in range(self.n_agents)
+        ]
 
     def get_capabilities_agent(self, agent_id):
         unit = self.get_unit_by_id(agent_id)
