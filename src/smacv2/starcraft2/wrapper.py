@@ -30,11 +30,10 @@ class StarCraftCapabilityEnvWrapper(MultiAgentEnv):
             reset_config = {}
             for distribution in self.env_key_to_distribution_map.values():
                 reset_config = {**reset_config, **distribution.generate()}
-
             return self.env.reset(reset_config)
-        except CannotResetException as cre:
+        except CannotResetException:
             # just retry
-            self.reset()
+            return self.reset()
 
     def __getattr__(self, name):
         if hasattr(self.env, name):

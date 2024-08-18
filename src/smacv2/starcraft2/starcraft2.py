@@ -100,7 +100,7 @@ class StarCraft2Env(MultiAgentEnv):
         min_attack_range=2,
         kill_unit_step_mul=2,
         fully_observable=False,
-        capability_config={},
+        capability_config=None,
         replay_dir="",
         replay_prefix="",
         window_size_x=1920,
@@ -243,7 +243,9 @@ class StarCraft2Env(MultiAgentEnv):
         self.reward_scale_rate = reward_scale_rate
 
         # Meta MARL
-        self.capability_config = capability_config
+        self.capability_config = (
+            {} if capability_config is None else capability_config
+        )
         self.fully_observable = fully_observable
         self.stochastic_attack = "attack" in self.capability_config
         self.stochastic_health = "health" in self.capability_config
