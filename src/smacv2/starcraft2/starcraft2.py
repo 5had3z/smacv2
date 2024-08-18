@@ -720,7 +720,8 @@ class StarCraft2Env(MultiAgentEnv):
             assert unit.health == 0, "No-op only available for dead agents."
             logging.debug("Agent {}: Dead".format(a_id))
             return None
-        elif action == 1:
+
+        if action == 1:
             # stop
             cmd = r_pb.ActionRawUnitCommand(
                 ability_id=PLAYER_ACTIONS["stop"],
@@ -1029,22 +1030,22 @@ class StarCraft2Env(MultiAgentEnv):
 
     def unit_shoot_range(self, agent_id):
         """Returns the shooting range for an agent."""
-        if self.use_unit_ranges:
-            attack_range_map = {
-                self.stalker_id: 6,
-                self.zealot_id: 0.1,
-                self.colossus_id: 7,
-                self.zergling_id: 0.1,
-                self.baneling_id: 0.25,
-                self.hydralisk_id: 5,
-                self.marine_id: 5,
-                self.marauder_id: 6,
-                self.medivac_id: 4,
-            }
-            unit = self.agents[agent_id]
-            return max(attack_range_map[unit.unit_type], self.min_attack_range)
-        else:
+        if not self.use_unit_ranges:
             return 6
+
+        attack_range_map = {
+            self.stalker_id: 6,
+            self.zealot_id: 0.1,
+            self.colossus_id: 7,
+            self.zergling_id: 0.1,
+            self.baneling_id: 0.25,
+            self.hydralisk_id: 5,
+            self.marine_id: 5,
+            self.marauder_id: 6,
+            self.medivac_id: 4,
+        }
+        unit = self.agents[agent_id]
+        return max(attack_range_map[unit.unit_type], self.min_attack_range)
 
     def unit_sight_range(self, agent_id):
         """Returns the sight range for an agent."""
@@ -2169,64 +2170,63 @@ class StarCraft2Env(MultiAgentEnv):
     def get_true_avail_agent_actions(self, agent_id):
         """Returns the available actions for agent_id."""
         unit = self.get_unit_by_id(agent_id)
-        if unit.health > 0:
-            # cannot choose no-op when alive
-            avail_actions = [0] * self.n_actions
-
-            # stop should be allowed
-            avail_actions[1] = 1
-
-            # see if we can move
-            if self.can_move(unit, Direction.NORTH):
-                avail_actions[2] = 1
-            if self.can_move(unit, Direction.SOUTH):
-                avail_actions[3] = 1
-            if self.can_move(unit, Direction.EAST):
-                avail_actions[4] = 1
-            if self.can_move(unit, Direction.WEST):
-                avail_actions[5] = 1
-
-            if self.conic_fov:
-                avail_actions[6 : 6 + self.n_fov_actions] = [
-                    1
-                ] * self.n_fov_actions
-
-            # Can attack only alive units that are alive in the shooting range
-            shoot_range = self.unit_shoot_range(agent_id)
-
-            target_items = self.enemies.items()
-            if (
-                self.map_type in ("MMM", "terran_gen")
-                and unit.unit_type == self.medivac_id
-            ):
-                # Medivacs cannot heal themselves or other flying units
-                target_items = [
-                    (t_id, t_unit)
-                    for (t_id, t_unit) in self.agents.items()
-                    if t_unit.unit_type != self.medivac_id
-                ]
-
-            # should we only be able to target people in the cone?
-            for t_id, t_unit in target_items:
-                if t_unit.health > 0:
-                    dist = self.distance(
-                        unit.pos.x, unit.pos.y, t_unit.pos.x, t_unit.pos.y
-                    )
-                    can_shoot = (
-                        dist <= shoot_range
-                        if not self.conic_fov
-                        else self.is_position_in_cone(
-                            agent_id, t_unit.pos, range_type="shoot_range"
-                        )
-                    )
-
-                    if can_shoot:
-                        avail_actions[t_id + self.n_actions_no_attack] = 1
-
-            return avail_actions
-
-        else:
+        if unit.health <= 0:
             return [1] + [0] * (self.n_actions - 1)
+
+        # cannot choose no-op when alive
+        avail_actions = [0] * self.n_actions
+
+        # stop should be allowed
+        avail_actions[1] = 1
+
+        # see if we can move
+        if self.can_move(unit, Direction.NORTH):
+            avail_actions[2] = 1
+        if self.can_move(unit, Direction.SOUTH):
+            avail_actions[3] = 1
+        if self.can_move(unit, Direction.EAST):
+            avail_actions[4] = 1
+        if self.can_move(unit, Direction.WEST):
+            avail_actions[5] = 1
+
+        if self.conic_fov:
+            avail_actions[6 : 6 + self.n_fov_actions] = [
+                1
+            ] * self.n_fov_actions
+
+        # Can attack only alive units that are alive in the shooting range
+        shoot_range = self.unit_shoot_range(agent_id)
+
+        target_items = self.enemies.items()
+        if (
+            self.map_type in ("MMM", "terran_gen")
+            and unit.unit_type == self.medivac_id
+        ):
+            # Medivacs cannot heal themselves or other flying units
+            target_items = [
+                (t_id, t_unit)
+                for (t_id, t_unit) in self.agents.items()
+                if t_unit.unit_type != self.medivac_id
+            ]
+
+        # should we only be able to target people in the cone?
+        for t_id, t_unit in target_items:
+            if t_unit.health > 0:
+                dist = self.distance(
+                    unit.pos.x, unit.pos.y, t_unit.pos.x, t_unit.pos.y
+                )
+                can_shoot = (
+                    dist <= shoot_range
+                    if not self.conic_fov
+                    else self.is_position_in_cone(
+                        agent_id, t_unit.pos, range_type="shoot_range"
+                    )
+                )
+
+                if can_shoot:
+                    avail_actions[t_id + self.n_actions_no_attack] = 1
+
+        return avail_actions
 
     def get_avail_actions(self):
         """Returns the available actions of all agents in a list."""
