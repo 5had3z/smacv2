@@ -19,14 +19,14 @@ from s2clientprotocol import sc2api_pb2 as sc_pb
 from smacv2.multiagentenv import MultiAgentEnv
 from smacv2.starcraft2.maps import get_map_params
 
-races = {
+RACES = {
     "R": sc_common.Random,
     "P": sc_common.Protoss,
     "T": sc_common.Terran,
     "Z": sc_common.Zerg,
 }
 
-difficulties = {
+DIFFICULTIES = {
     "1": sc_pb.VeryEasy,
     "2": sc_pb.Easy,
     "3": sc_pb.Medium,
@@ -39,10 +39,10 @@ difficulties = {
     "A": sc_pb.CheatInsane,
 }
 
-actions = {
-    "move": 16,  # target: PointOrUnit
+PLAYER_ACTIONS = {
+    "move": 16,
     "attack": 23,  # target: PointOrUnit
-    "stop": 4,  # target: None
+    "stop": 4,
     "heal": 386,  # Unit
 }
 
@@ -446,13 +446,13 @@ class StarCraft2Env(MultiAgentEnv):
         create.player_setup.add(type=sc_pb.Participant)
         create.player_setup.add(
             type=sc_pb.Computer,
-            race=races[self._bot_race],
-            difficulty=difficulties[self.difficulty],
+            race=RACES[self._bot_race],
+            difficulty=DIFFICULTIES[self.difficulty],
         )
         self._controller.create_game(create)
 
         join = sc_pb.RequestJoinGame(
-            race=races[self._agent_race], options=interface_options
+            race=RACES[self._agent_race], options=interface_options
         )
         self._controller.join_game(join)
 
@@ -723,7 +723,7 @@ class StarCraft2Env(MultiAgentEnv):
         elif action == 1:
             # stop
             cmd = r_pb.ActionRawUnitCommand(
-                ability_id=actions["stop"],
+                ability_id=PLAYER_ACTIONS["stop"],
                 unit_tags=[tag],
                 queue_command=False,
             )
@@ -732,7 +732,7 @@ class StarCraft2Env(MultiAgentEnv):
         elif action == 2:
             # move north
             cmd = r_pb.ActionRawUnitCommand(
-                ability_id=actions["move"],
+                ability_id=PLAYER_ACTIONS["move"],
                 target_world_space_pos=sc_common.Point2D(
                     x=x, y=y + self._move_amount
                 ),
@@ -747,7 +747,7 @@ class StarCraft2Env(MultiAgentEnv):
         elif action == 3:
             # move south
             cmd = r_pb.ActionRawUnitCommand(
-                ability_id=actions["move"],
+                ability_id=PLAYER_ACTIONS["move"],
                 target_world_space_pos=sc_common.Point2D(
                     x=x, y=y - self._move_amount
                 ),
@@ -762,7 +762,7 @@ class StarCraft2Env(MultiAgentEnv):
         elif action == 4:
             # move east
             cmd = r_pb.ActionRawUnitCommand(
-                ability_id=actions["move"],
+                ability_id=PLAYER_ACTIONS["move"],
                 target_world_space_pos=sc_common.Point2D(
                     x=x + self._move_amount, y=y
                 ),
@@ -778,7 +778,7 @@ class StarCraft2Env(MultiAgentEnv):
         elif action == 5:
             # move west
             cmd = r_pb.ActionRawUnitCommand(
-                ability_id=actions["move"],
+                ability_id=PLAYER_ACTIONS["move"],
                 target_world_space_pos=sc_common.Point2D(
                     x=x - self._move_amount, y=y
                 ),
@@ -816,7 +816,7 @@ class StarCraft2Env(MultiAgentEnv):
                         f"Agent {a_id} {action_name}s {target_id}, but fails"
                     )
                     return None
-            action_id = actions[action_name]
+            action_id = PLAYER_ACTIONS[action_name]
             target_tag = target_unit.tag
 
             can_shoot = self.get_can_shoot(a_id, target_unit)
@@ -875,7 +875,7 @@ class StarCraft2Env(MultiAgentEnv):
                 if min_id == -1:
                     self.heuristic_targets[a_id] = None
                     return None, 0
-            action_id = actions["heal"]
+            action_id = PLAYER_ACTIONS["heal"]
             target_tag = self.agents[self.heuristic_targets[a_id]].tag
         else:
             if target is None or self.enemies[target].health == 0:
@@ -898,7 +898,7 @@ class StarCraft2Env(MultiAgentEnv):
                 if min_id == -1:
                     self.heuristic_targets[a_id] = None
                     return None, 0
-            action_id = actions["attack"]
+            action_id = PLAYER_ACTIONS["attack"]
             target_tag = self.enemies[self.heuristic_targets[a_id]].tag
 
         action_num = self.heuristic_targets[a_id] + self.n_actions_no_attack
@@ -941,7 +941,7 @@ class StarCraft2Env(MultiAgentEnv):
                     action_num = 3
 
             cmd = r_pb.ActionRawUnitCommand(
-                ability_id=actions["move"],
+                ability_id=PLAYER_ACTIONS["move"],
                 target_world_space_pos=target_pos,
                 unit_tags=[tag],
                 queue_command=False,
@@ -2291,22 +2291,15 @@ class StarCraft2Env(MultiAgentEnv):
             else:
                 init_pos = [sc_common.Point2D(x=24, y=16)] * self.n_enemies
         else:
-            if ally:
-                init_pos = [
-                    sc_common.Point2D(
-                        x=self.ally_start_positions[i][0],
-                        y=self.ally_start_positions[i][1],
-                    )
-                    for i in range(self.ally_start_positions.shape[0])
-                ]
-            else:
-                init_pos = [
-                    sc_common.Point2D(
-                        x=self.enemy_start_positions[i][0],
-                        y=self.enemy_start_positions[i][1],
-                    )
-                    for i in range(self.enemy_start_positions.shape[0])
-                ]
+            start_pos = (
+                self.ally_start_positions
+                if ally
+                else self.enemy_start_positions
+            )
+            init_pos = [
+                sc_common.Point2D(x=pos[0], y=pos[1]) for pos in start_pos
+            ]
+
         debug_command = []
         for unit_id, unit in enumerate(team):
             unit_type = self._convert_unit_name_to_unit_type(unit, ally=ally)
@@ -2324,13 +2317,16 @@ class StarCraft2Env(MultiAgentEnv):
         self._controller.debug(debug_command)
 
     def _convert_unit_name_to_unit_type(self, unit_name, ally=True):
-        if ally:
-            return self.ally_unit_map[unit_name]
-        else:
-            return self.enemy_unit_map[unit_name]
+        return (
+            self.ally_unit_map[unit_name]
+            if ally
+            else self.enemy_unit_map[unit_name]
+        )
 
-    def init_units(self, ally_team, enemy_team, episode_config={}):
+    def init_units(self, ally_team, enemy_team, episode_config=None):
         """Initialise the units."""
+        if episode_config is None:
+            episode_config = {}
         if ally_team and enemy_team:
             # can use any value for min unit type because
             # it is hardcoded based on the version
@@ -2406,7 +2402,7 @@ class StarCraft2Env(MultiAgentEnv):
         if self._unit_types is None:
             warn(
                 "unit types have not been initialized yet, please call"
-                "env.reset() to populate this and call t1286he method again."
+                "env.reset() to populate this and call the method again."
             )
 
         return self._unit_types
@@ -2557,29 +2553,16 @@ class StarCraft2Env(MultiAgentEnv):
                 self.zergling_id = min_unit_type + 1
                 self._register_unit_mapping("zergling", min_unit_type + 1)
 
-    def only_medivac_left(self, ally):
+    def only_medivac_left(self, ally: bool):
         """Check if only Medivac units are left."""
-        if self.map_type != "MMM" and self.map_type != "terran_gen":
+        if self.map_type not in {"MMM", "terran_gen"}:
             return False
-
-        if ally:
-            units_alive = [
-                a
-                for a in self.agents.values()
-                if (a.health > 0 and a.unit_type != self.medivac_id)
-            ]
-            if len(units_alive) == 0:
-                return True
-            return False
-        else:
-            units_alive = [
-                a
-                for a in self.enemies.values()
-                if (a.health > 0 and a.unit_type != Terran.Medivac)
-            ]
-            if len(units_alive) == 0:
-                return True
-            return False
+        units = self.agents.values() if ally else self.enemies.values()
+        medivac_id = self.medivac_id if ally else Terran.Medivac
+        units_alive = sum(
+            a.health > 0 and a.unit_type != medivac_id for a in units
+        )
+        return units_alive == 0
 
     def get_unit_by_id(self, a_id):
         """Get unit by ID."""

@@ -180,7 +180,6 @@ def main():
     env = StarCraftCapabilityEnvWrapper(
         capability_config=distribution_config,
         map_name="10gen_terran",
-        debug=True,
         conic_fov=False,
         obs_own_pos=True,
         use_unit_ranges=True,

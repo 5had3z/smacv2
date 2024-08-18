@@ -30,7 +30,6 @@ def main():
     env = StarCraftCapabilityEnvWrapper(
         capability_config=distribution_config,
         map_name="10gen_terran",
-        debug=False,
         conic_fov=False,
         use_unit_ranges=True,
         min_attack_range=2,
