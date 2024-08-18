@@ -1052,22 +1052,21 @@ class StarCraft2Env(MultiAgentEnv):
     def unit_sight_range(self, agent_id):
         """Returns the sight range for an agent."""
         # get the unit
-        if self.use_unit_ranges:
-            sight_range_map = {
-                self.stalker_id: 10,
-                self.zealot_id: 9,
-                self.colossus_id: 10,
-                self.zergling_id: 8,
-                self.baneling_id: 8,
-                self.hydralisk_id: 9,
-                self.marine_id: 9,
-                self.marauder_id: 10,
-                self.medivac_id: 11,
-            }
-            unit = self.agents[agent_id]
-            return sight_range_map[unit.unit_type]
-        else:
+        if not self.use_unit_ranges:
             return 9
+        sight_range_map = {
+            self.stalker_id: 10,
+            self.zealot_id: 9,
+            self.colossus_id: 10,
+            self.zergling_id: 8,
+            self.baneling_id: 8,
+            self.hydralisk_id: 9,
+            self.marine_id: 9,
+            self.marauder_id: 10,
+            self.medivac_id: 11,
+        }
+        unit = self.agents[agent_id]
+        return sight_range_map[unit.unit_type]
 
     def unit_max_cooldown(self, unit):
         """Returns the maximal cooldown for a unit."""
@@ -1098,14 +1097,13 @@ class StarCraft2Env(MultiAgentEnv):
 
     def unit_max_shield(self, unit):
         """Returns maximal shield for a given unit."""
-        if unit.unit_type == 74 or unit.unit_type == self.stalker_id:
+        if unit.unit_type in {74, self.stalker_id}:
             return 80  # Protoss's Stalker
-        elif unit.unit_type == 73 or unit.unit_type == self.zealot_id:
+        if unit.unit_type in {73, self.zealot_id}:
             return 50  # Protoss's Zealot
-        elif unit.unit_type == 4 or unit.unit_type == self.colossus_id:
+        if unit.unit_type in {4, self.colossus_id}:
             return 150  # Protoss's Colossus
-        else:
-            raise Exception("Maximum shield not recognised")
+        raise KeyError(f"Unit {unit.unit_type}: maximum shield not recognised")
 
     def build_state_feature_names(self):
         """Return the state feature names."""
@@ -2092,67 +2090,66 @@ class StarCraft2Env(MultiAgentEnv):
     def get_avail_agent_actions(self, agent_id):
         """Returns the available actions for agent_id."""
         unit = self.get_unit_by_id(agent_id)
-        if unit.health > 0:
-            # cannot choose no-op when alive
-            avail_actions = [0] * self.n_actions
-
-            # stop should be allowed
-            avail_actions[1] = 1
-
-            # see if we can move
-            if self.can_move(unit, Direction.NORTH):
-                avail_actions[2] = 1
-            if self.can_move(unit, Direction.SOUTH):
-                avail_actions[3] = 1
-            if self.can_move(unit, Direction.EAST):
-                avail_actions[4] = 1
-            if self.can_move(unit, Direction.WEST):
-                avail_actions[5] = 1
-
-            if self.conic_fov:
-                avail_actions[6 : 6 + self.n_fov_actions] = [
-                    1
-                ] * self.n_fov_actions
-
-            # Can attack only alive units that are alive in the shooting range
-            shoot_range = self.unit_shoot_range(agent_id)
-
-            target_items = self.enemies.items()
-            if (
-                self.map_type in ("MMM", "terran_gen")
-                and unit.unit_type == self.medivac_id
-            ):
-                # Medivacs cannot heal themselves or other flying units
-                target_items = [
-                    (t_id, t_unit)
-                    for (t_id, t_unit) in self.agents.items()
-                    if t_unit.unit_type != self.medivac_id
-                ]
-
-            # should we only be able to target people in the cone?
-            for t_id, t_unit in target_items:
-                if t_unit.health > 0:
-                    if not self.action_mask:
-                        avail_actions[t_id + self.n_actions_no_attack] = 1
-                    else:
-                        dist = self.distance(
-                            unit.pos.x, unit.pos.y, t_unit.pos.x, t_unit.pos.y
-                        )
-                        can_shoot = (
-                            dist <= shoot_range
-                            if not self.conic_fov
-                            else self.is_position_in_cone(
-                                agent_id, t_unit.pos, range_type="shoot_range"
-                            )
-                        )
-
-                        if can_shoot:
-                            avail_actions[t_id + self.n_actions_no_attack] = 1
-
-            return avail_actions
-
-        else:
+        if unit.health <= 0:
             return [1] + [0] * (self.n_actions - 1)
+
+        # cannot choose no-op when alive
+        avail_actions = [0] * self.n_actions
+
+        # stop should be allowed
+        avail_actions[1] = 1
+
+        # see if we can move
+        if self.can_move(unit, Direction.NORTH):
+            avail_actions[2] = 1
+        if self.can_move(unit, Direction.SOUTH):
+            avail_actions[3] = 1
+        if self.can_move(unit, Direction.EAST):
+            avail_actions[4] = 1
+        if self.can_move(unit, Direction.WEST):
+            avail_actions[5] = 1
+
+        if self.conic_fov:
+            avail_actions[6 : 6 + self.n_fov_actions] = [
+                1
+            ] * self.n_fov_actions
+
+        # Can attack only alive units that are alive in the shooting range
+        shoot_range = self.unit_shoot_range(agent_id)
+
+        target_items = self.enemies.items()
+        if (
+            self.map_type in ("MMM", "terran_gen")
+            and unit.unit_type == self.medivac_id
+        ):
+            # Medivacs cannot heal themselves or other flying units
+            target_items = [
+                (t_id, t_unit)
+                for (t_id, t_unit) in self.agents.items()
+                if t_unit.unit_type != self.medivac_id
+            ]
+
+        # should we only be able to target people in the cone?
+        for t_id, t_unit in target_items:
+            if t_unit.health > 0:
+                if not self.action_mask:
+                    avail_actions[t_id + self.n_actions_no_attack] = 1
+                else:
+                    dist = self.distance(
+                        unit.pos.x, unit.pos.y, t_unit.pos.x, t_unit.pos.y
+                    )
+                    can_shoot = (
+                        dist <= shoot_range
+                        if not self.conic_fov
+                        else self.is_position_in_cone(
+                            agent_id, t_unit.pos, range_type="shoot_range"
+                        )
+                    )
+
+                    if can_shoot:
+                        avail_actions[t_id + self.n_actions_no_attack] = 1
+
+        return avail_actions
 
     def get_can_shoot(self, agent_id, t_unit):
         unit = self.get_unit_by_id(agent_id)
@@ -2201,7 +2198,7 @@ class StarCraft2Env(MultiAgentEnv):
 
         target_items = self.enemies.items()
         if (
-            self.map_type in ("MMM", "terran_gen")
+            self.map_type in {"MMM", "terran_gen"}
             and unit.unit_type == self.medivac_id
         ):
             # Medivacs cannot heal themselves or other flying units
