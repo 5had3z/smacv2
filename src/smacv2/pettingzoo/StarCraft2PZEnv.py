@@ -1,11 +1,11 @@
-from smacv2.env import StarCraft2Env
-from gym.utils import EzPickle
-from gym.utils import seeding
-from gym import spaces
-from pettingzoo.utils.env import ParallelEnv
-from pettingzoo.utils.conversions import from_parallel_wrapper
-from pettingzoo.utils import wrappers
 import numpy as np
+from gym import spaces
+from gym.utils import EzPickle, seeding
+from pettingzoo.utils import wrappers
+from pettingzoo.utils.conversions import from_parallel_wrapper
+from pettingzoo.utils.env import ParallelEnv
+
+from smacv2 import StarCraft2Env
 
 max_cycles_default = 1000
 

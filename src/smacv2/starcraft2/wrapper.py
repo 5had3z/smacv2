@@ -1,6 +1,6 @@
-from smacv2.env.starcraft2.distributions import get_distribution
-from smacv2.env.starcraft2.starcraft2 import StarCraft2Env, CannotResetException
-from smacv2.env import MultiAgentEnv
+from smacv2 import MultiAgentEnv
+from smacv2.starcraft2.distributions import get_distribution
+from smacv2.starcraft2.starcraft2 import CannotResetException, StarCraft2Env
 
 
 class StarCraftCapabilityEnvWrapper(MultiAgentEnv):

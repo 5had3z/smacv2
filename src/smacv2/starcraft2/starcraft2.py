@@ -1,30 +1,23 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
-from smacv2.env.multiagentenv import MultiAgentEnv
-
-from smacv2.env.starcraft2.maps import get_map_params
-
 import atexit
-from warnings import warn
-from operator import attrgetter
-from copy import deepcopy
-import numpy as np
-import random
 import enum
 import math
+import random
+from copy import deepcopy
+from operator import attrgetter
+from warnings import warn
+
+import numpy as np
 from absl import logging
-from pysc2.lib.units import Neutral, Protoss, Terran, Zerg
-
-from pysc2 import maps
-from pysc2 import run_configs
+from pysc2 import maps, run_configs
 from pysc2.lib import protocol
-
+from pysc2.lib.units import Neutral, Protoss, Terran, Zerg
 from s2clientprotocol import common_pb2 as sc_common
-from s2clientprotocol import sc2api_pb2 as sc_pb
-from s2clientprotocol import raw_pb2 as r_pb
 from s2clientprotocol import debug_pb2 as d_pb
+from s2clientprotocol import raw_pb2 as r_pb
+from s2clientprotocol import sc2api_pb2 as sc_pb
+
+from smacv2.multiagentenv import MultiAgentEnv
+from smacv2.starcraft2.maps import get_map_params
 
 races = {
     "R": sc_common.Random,
@@ -63,8 +56,10 @@ class Direction(enum.IntEnum):
 
 EPS = 1e-7
 
+
 class CannotResetException(Exception):
     pass
+
 
 class StarCraft2Env(MultiAgentEnv):
     """The StarCraft II environment for decentralised multi-agent
@@ -1516,9 +1511,9 @@ class StarCraft2Env(MultiAgentEnv):
             ind = self.n_actions_move
 
             if self.obs_pathing_grid:
-                move_feats[
-                    ind : ind + self.n_obs_pathing  # noqa
-                ] = self.get_surrounding_pathing(unit)
+                move_feats[ind : ind + self.n_obs_pathing] = (  # noqa
+                    self.get_surrounding_pathing(unit)
+                )
                 ind += self.n_obs_pathing
 
             if self.obs_terrain_height:
@@ -2282,7 +2277,7 @@ class StarCraft2Env(MultiAgentEnv):
 
     def render(self, mode="human"):
         if self.renderer is None:
-            from smacv2.env.starcraft2.render import StarCraft2Renderer
+            from smacv2.starcraft2.render import StarCraft2Renderer
 
             self.renderer = StarCraft2Renderer(self, mode)
         assert (

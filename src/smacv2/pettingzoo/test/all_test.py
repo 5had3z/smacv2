@@ -1,9 +1,11 @@
-from smacv2.env.starcraft2.maps import smac_maps
-from pysc2 import maps as pysc2_maps
-from smacv2.env.pettingzoo import StarCraft2PZEnv as sc2
+import pickle
+
 import pytest
 from pettingzoo import test
-import pickle
+from pysc2 import maps as pysc2_maps
+
+from smacv2.pettingzoo import StarCraft2PZEnv as sc2
+from smacv2.starcraft2.maps import smac_maps
 
 smac_map_registry = smac_maps.get_smac_map_registry()
 all_maps = pysc2_maps.get_maps()

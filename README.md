@@ -146,17 +146,14 @@ The second part is the distribution. These live in [distributions.py](https://gi
 SMACv2 follows the same API as SMAC and so can be used exactly the same way. As an example, the below code allows individual agents to execute random policies. The config corresponds to the 5 unit Terran map from SMACv2. 
 
 ```python
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 from os import replace
 
-from smacv2.env import StarCraft2Env
+from smacv2 import StarCraft2Env
 import numpy as np
 from absl import logging
 import time
 
-from smacv2.env.starcraft2.wrapper import StarCraftCapabilityEnvWrapper
+from smacv2.starcraft2.wrapper import StarCraftCapabilityEnvWrapper
 
 logging.set_verbosity(logging.DEBUG)
 

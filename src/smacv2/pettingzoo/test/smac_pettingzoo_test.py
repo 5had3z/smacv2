@@ -1,9 +1,11 @@
-import os
-import sys
 import inspect
-from pettingzoo import test
-from smacv2.env.pettingzoo import StarCraft2PZEnv as sc2
+import os
 import pickle
+import sys
+
+from pettingzoo import test
+
+from smacv2.pettingzoo import StarCraft2PZEnv as sc2
 
 current_dir = os.path.dirname(
     os.path.abspath(inspect.getfile(inspect.currentframe()))

@@ -32,6 +32,8 @@ dependencies = [
   "pygame>=2.0.0",
 ]
 
+[project.scripts]
+map-list = "smacv2:map_list"
 
 [project.optional-dependencies]
 dev = [
@@ -43,6 +45,10 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+smacv2_examples = ["**/*.yaml", "**/*.rst", "**/*.pkl"]
+smacv2 = ["**/*.SC2Map"]
 
 [tool.black]
 line-length = 79

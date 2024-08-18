@@ -1,10 +1,6 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import random
 import numpy as np
-from smacv2.env.pettingzoo import StarCraft2PZEnv
+from smacv2.pettingzoo import StarCraft2PZEnv
 
 
 def main():

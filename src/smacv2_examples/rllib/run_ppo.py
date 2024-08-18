@@ -1,7 +1,3 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 """Example of running StarCraft2 with RLlib PPO.
 
 In this setup, each agent will be controlled by an independent PPO policy.
@@ -16,8 +12,8 @@ import ray
 from ray.tune import run_experiments, register_env
 from ray.rllib.models import ModelCatalog
 
-from smacv2.examples.rllib.env import RLlibStarCraft2Env
-from smacv2.examples.rllib.model import MaskedActionsModel
+from smacv2_examples.rllib.env import RLlibStarCraft2Env
+from smacv2_examples.rllib.model import MaskedActionsModel
 
 
 if __name__ == "__main__":

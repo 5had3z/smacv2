@@ -1,20 +1,17 @@
-import numpy as np
+import collections
+import math
+import os
+import platform
+import queue
 import re
 import subprocess
-import platform
-from absl import logging
-import math
 import time
-import collections
-import os
-import pygame
-import queue
 
-from pysc2.lib import colors
-from pysc2.lib import point
+import numpy as np
+import pygame
+from absl import logging
+from pysc2.lib import colors, features, point, transform
 from pysc2.lib.renderer_human import _Surface
-from pysc2.lib import transform
-from pysc2.lib import features
 
 
 def clamp(n, smallest, largest):

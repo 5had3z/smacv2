@@ -1,7 +1,3 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 """Example of running StarCraft2 with RLlib QMIX.
 
 This assumes all agents are homogeneous. The agents are grouped and assigned
@@ -15,7 +11,7 @@ from gym.spaces import Tuple
 import ray
 from ray.tune import run_experiments, register_env
 
-from smacv2.examples.rllib.env import RLlibStarCraft2Env
+from smacv2_examples.rllib.env import RLlibStarCraft2Env
 
 
 if __name__ == "__main__":

@@ -1,11 +1,12 @@
-from abc import ABC, abstractmethod, abstractproperty
+from abc import ABC, abstractmethod
 from copy import deepcopy
-from typing import Any, Dict
 from itertools import combinations_with_replacement
-from random import choice, shuffle
 from math import inf
-from numpy.random import default_rng
+from random import choice, shuffle
+from typing import Any, Dict
+
 import numpy as np
+from numpy.random import default_rng
 
 
 class Distribution(ABC):
@@ -14,7 +15,7 @@ class Distribution(ABC):
         pass
 
     @property
-    @abstractproperty
+    @abstractmethod
     def n_tasks(self) -> int:
         pass
 
@@ -149,7 +150,7 @@ class WeightedTeamsDistribution(Distribution):
             )
             enemy_team.extend(extra_enemies)
         elif self.n_enemies < self.n_units:
-            enemy_team = enemy_team[:self.n_enemies]
+            enemy_team = enemy_team[: self.n_enemies]
 
         return {
             self.env_key: {
@@ -263,16 +264,20 @@ class ReflectPositionDistribution(Distribution):
         ally_positions = ally_positions_dict["ally_start_positions"]["item"]
         enemy_positions = np.zeros((self.n_enemies, 2))
         if self.n_enemies >= self.n_units:
-            enemy_positions[: self.n_units, 0] = self.map_x - ally_positions[:, 0]
+            enemy_positions[: self.n_units, 0] = (
+                self.map_x - ally_positions[:, 0]
+            )
             enemy_positions[: self.n_units, 1] = ally_positions[:, 1]
             if self.n_enemies > self.n_units:
                 gen_enemy_positions = self.enemy_pos_generator.generate()
-                gen_enemy_positions = gen_enemy_positions["enemy_start_positions"][
-                    "item"
-                ]
-                enemy_positions[self.n_units:, :] = gen_enemy_positions
+                gen_enemy_positions = gen_enemy_positions[
+                    "enemy_start_positions"
+                ]["item"]
+                enemy_positions[self.n_units :, :] = gen_enemy_positions
         else:
-            enemy_positions[:, 0] = self.map_x - ally_positions[: self.n_enemies, 0]
+            enemy_positions[:, 0] = (
+                self.map_x - ally_positions[: self.n_enemies, 0]
+            )
             enemy_positions[:, 1] = ally_positions[: self.n_enemies, 1]
         return {
             "ally_start_positions": {"item": ally_positions, "id": 0},
@@ -359,6 +364,7 @@ class SurroundedPositionDistribution(Distribution):
 
 
 register_distribution("surrounded", SurroundedPositionDistribution)
+
 
 # If this becomes common, then should work on a more satisfying way
 # of doing this
