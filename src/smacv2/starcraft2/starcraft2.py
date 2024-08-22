@@ -505,7 +505,7 @@ class StarCraft2Env(MultiAgentEnv):
             / 255
         )
 
-    def reset(self, episode_config= None):
+    def reset(self, episode_config: dict | None = None):
         """Reset the environment. Required after each full episode.
         Returns initial observations and states.
         """

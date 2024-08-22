@@ -376,11 +376,11 @@ class SurroundedAndReflectPositionDistribution(Distribution):
         self.rng = default_rng()
 
     def generate(self) -> Dict[str, Dict[str, Any]]:
-        p = self.rng.random()
-        if p > self.p_threshold:
-            return self.surrounded_distribution.generate()
-        else:
-            return self.reflect_distribution.generate()
+        return (
+            self.surrounded_distribution.generate()
+            if self.rng.random() > self.p_threshold
+            else self.reflect_distribution.generate()
+        )
 
     @property
     def n_tasks(self):
