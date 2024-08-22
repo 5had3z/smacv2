@@ -239,21 +239,19 @@ class ReflectPositionDistribution(Distribution):
         # assert (
         #     self.n_enemies >= self.n_units
         # ), "Number of enemies must be >= number of units"
-        self.map_x = config["map_x"]
-        self.map_y = config["map_y"]
         config_copy = deepcopy(config)
         config_copy["env_key"] = "ally_start_positions"
         config_copy["lower_bound"] = (0, 0)
         # subtract one from the x coordinate because SC2 goes wrong
         # when you spawn ally and enemy units on top of one another
         # -1 gives a sensible 'buffer zone' of size 2
-        config_copy["upper_bound"] = (self.map_x / 2 - 1, self.map_y)
+        config_copy["upper_bound"] = (0.49, 1)
         self.pos_generator = PerAgentUniformDistribution(config_copy)
         if self.n_enemies > self.n_units:
             enemy_config_copy = deepcopy(config)
             enemy_config_copy["env_key"] = "enemy_start_positions"
-            enemy_config_copy["lower_bound"] = (self.map_x / 2, 0)
-            enemy_config_copy["upper_bound"] = (self.map_x, self.map_y)
+            enemy_config_copy["lower_bound"] = (0.51, 0)
+            enemy_config_copy["upper_bound"] = (1, 1)
             enemy_config_copy["n_units"] = self.n_enemies - self.n_units
             self.enemy_pos_generator = PerAgentUniformDistribution(
                 enemy_config_copy
@@ -264,9 +262,7 @@ class ReflectPositionDistribution(Distribution):
         ally_positions = ally_positions_dict["ally_start_positions"]["item"]
         enemy_positions = np.zeros((self.n_enemies, 2))
         if self.n_enemies >= self.n_units:
-            enemy_positions[: self.n_units, 0] = (
-                self.map_x - ally_positions[:, 0]
-            )
+            enemy_positions[: self.n_units, 0] = 1 - ally_positions[:, 0]
             enemy_positions[: self.n_units, 1] = ally_positions[:, 1]
             if self.n_enemies > self.n_units:
                 gen_enemy_positions = self.enemy_pos_generator.generate()
@@ -275,9 +271,7 @@ class ReflectPositionDistribution(Distribution):
                 ]["item"]
                 enemy_positions[self.n_units :, :] = gen_enemy_positions
         else:
-            enemy_positions[:, 0] = (
-                self.map_x - ally_positions[: self.n_enemies, 0]
-            )
+            enemy_positions[:, 0] = 1 - ally_positions[: self.n_enemies, 0]
             enemy_positions[:, 1] = ally_positions[: self.n_enemies, 1]
         return {
             "ally_start_positions": {"item": ally_positions, "id": 0},
@@ -303,22 +297,20 @@ class SurroundedPositionDistribution(Distribution):
         self.config = config
         self.n_units = config["n_units"]
         self.n_enemies = config["n_enemies"]
-        self.map_x = config["map_x"]
-        self.map_y = config["map_y"]
         self.rng = default_rng()
 
     def generate(self) -> Dict[str, Dict[str, Any]]:
         # need multiple centre points because SC2 does not cope with
         # spawning ally and enemy units on top of one another in some
         # cases
-        offset = 2
-        centre_point = np.array([self.map_x / 2, self.map_y / 2])
-        diagonal_to_centre_point = {
-            0: np.array([self.map_x / 2 - offset, self.map_y / 2 - offset]),
-            1: np.array([self.map_x / 2 - offset, self.map_y / 2 + offset]),
-            2: np.array([self.map_x / 2 + offset, self.map_y / 2 + offset]),
-            3: np.array([self.map_x / 2 + offset, self.map_y / 2 - offset]),
-        }
+        offset = 0.01
+        centre_point = np.array([0.5, 0.5])
+        diagonal_to_centre_point = [
+            np.array([0.5 - offset, 0.5 - offset]),
+            np.array([0.5 - offset, 0.5 + offset]),
+            np.array([0.5 + offset, 0.5 + offset]),
+            np.array([0.5 + offset, 0.5 - offset]),
+        ]
         ally_position = np.tile(centre_point, (self.n_units, 1))
         enemy_position = np.zeros((self.n_enemies, 2))
         # decide on the number of groups (between 1 and 4)
@@ -333,12 +325,12 @@ class SurroundedPositionDistribution(Distribution):
             np.array(range(4)), size=(n_groups,), replace=False
         )
 
-        diagonal_to_point_map = {
-            0: np.array([0, 0]),
-            1: np.array([0, self.map_y]),
-            2: np.array([self.map_x, self.map_y]),
-            3: np.array([self.map_x, 0]),
-        }
+        diagonal_to_point_map = [
+            np.array([0, 0]),
+            np.array([0, 1]),
+            np.array([1, 1]),
+            np.array([1, 0]),
+        ]
         unit_index = 0
         for i in range(n_groups):
             t = group_position[i]

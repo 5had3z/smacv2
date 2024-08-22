@@ -2284,7 +2284,7 @@ class StarCraft2Env(MultiAgentEnv):
                 else self.enemy_start_positions
             )
             init_pos = [
-                sc_common.Point2D(x=pos[0], y=pos[1]) for pos in start_pos
+                sc_common.Point2D(x=pos[0] * self.map_x, y=pos[1] * self.map_y) for pos in start_pos
             ]
 
         debug_command = []
