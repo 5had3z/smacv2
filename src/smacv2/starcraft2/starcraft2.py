@@ -9,7 +9,7 @@ import numpy as np
 from absl import logging
 from pysc2 import maps, run_configs
 from pysc2.lib import protocol
-from pysc2.lib.units import Neutral, Protoss, Terran, Zerg
+from pysc2.lib.units import Protoss, Terran, Zerg
 from s2clientprotocol import common_pb2 as sc_common
 from s2clientprotocol import debug_pb2 as d_pb
 from s2clientprotocol import raw_pb2 as r_pb
@@ -2284,7 +2284,8 @@ class StarCraft2Env(MultiAgentEnv):
                 else self.enemy_start_positions
             )
             init_pos = [
-                sc_common.Point2D(x=pos[0] * self.map_x, y=pos[1] * self.map_y) for pos in start_pos
+                sc_common.Point2D(x=pos[0] * self.map_x, y=pos[1] * self.map_y)
+                for pos in start_pos
             ]
 
         debug_command = []

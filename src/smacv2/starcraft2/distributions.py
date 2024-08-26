@@ -1,7 +1,7 @@
+from typing import Type
 from abc import ABC, abstractmethod
 from copy import deepcopy
 from itertools import combinations_with_replacement
-from math import inf
 from random import choice, shuffle
 from typing import Any, Dict
 
@@ -10,24 +10,23 @@ from numpy.random import default_rng
 
 
 class Distribution(ABC):
+    """Some distribution generator"""
+
     @abstractmethod
     def generate(self) -> Dict[str, Any]:
-        pass
-
-    @property
-    @abstractmethod
-    def n_tasks(self) -> int:
-        pass
+        """Sample from the distribution"""
 
 
-DISTRIBUTION_MAP = {}
+DISTRIBUTION_MAP: dict[str, Type[Distribution]] = {}
 
 
 def get_distribution(key):
+    """Retrieve distribution class from registry"""
     return DISTRIBUTION_MAP[key]
 
 
-def register_distribution(key, cls):
+def register_distribution(key, cls: Distribution):
+    """Add distribution to registry"""
     DISTRIBUTION_MAP[key] = cls
 
 
@@ -71,10 +70,6 @@ class FixedDistribution(Distribution):
             shuffle(team)
             return {self.env_key: {"item": team, "id": team_id}}
 
-    @property
-    def n_tasks(self):
-        return len(self.teams)
-
 
 register_distribution("fixed", FixedDistribution)
 
@@ -103,12 +98,6 @@ class AllTeamsDistribution(Distribution):
                 "id": team_id,
             }
         }
-
-    @property
-    def n_tasks(self):
-        # TODO adjust so that this can handle exceptions
-        assert not self.exceptions
-        return len(self.combinations)
 
 
 register_distribution("all_teams", AllTeamsDistribution)
@@ -160,10 +149,6 @@ class WeightedTeamsDistribution(Distribution):
             }
         }
 
-    @property
-    def n_tasks(self):
-        return inf
-
 
 register_distribution("weighted_teams", WeightedTeamsDistribution)
 
@@ -189,10 +174,6 @@ class PerAgentUniformDistribution(Distribution):
         )
         return {self.env_key: {"item": probs, "id": 0}}
 
-    @property
-    def n_tasks(self):
-        return inf
-
 
 register_distribution("per_agent_uniform", PerAgentUniformDistribution)
 
@@ -215,10 +196,6 @@ class MaskDistribution(Distribution):
             ],
         )
         return {"enemy_mask": {"item": mask, "id": 0}}
-
-    @property
-    def n_tasks(self):
-        return inf
 
 
 register_distribution("mask", MaskDistribution)
@@ -277,10 +254,6 @@ class ReflectPositionDistribution(Distribution):
             "ally_start_positions": {"item": ally_positions, "id": 0},
             "enemy_start_positions": {"item": enemy_positions, "id": 0},
         }
-
-    @property
-    def n_tasks(self) -> int:
-        return inf
 
 
 register_distribution("reflect_position", ReflectPositionDistribution)
@@ -350,12 +323,35 @@ class SurroundedPositionDistribution(Distribution):
             "enemy_start_positions": {"item": enemy_position, "id": 0},
         }
 
-    @property
-    def n_tasks(self):
-        return inf
-
 
 register_distribution("surrounded", SurroundedPositionDistribution)
+
+
+class GroupedDistribution(Distribution):
+    """Units are spawned in the same spot, biased towards one side of the map"""
+
+    def __init__(self, config: dict):
+        self.config = config
+        self.n_units = config["n_units"]
+        self.n_enemies = config["n_enemies"]
+        self.rng = default_rng()
+
+    def generate(self) -> Dict[str, Any]:
+        unit_mean = self.rng.normal([0.25, 0.5], scale=[0.125, 0.25])
+        unit_mean = unit_mean.clip(0, 1)
+        unit_mean = unit_mean[None].repeat(self.n_units, axis=0)
+
+        enemy_mean = self.rng.normal([0.75, 0.5], scale=[0.125, 0.25])
+        enemy_mean = enemy_mean.clip(0, 1)
+        enemy_mean = enemy_mean[None].repeat(self.n_enemies, axis=0)
+
+        return {
+            "ally_start_positions": {"item": unit_mean, "id": 0},
+            "enemy_start_positions": {"item": enemy_mean, "id": 0},
+        }
+
+
+register_distribution("grouped", GroupedDistribution)
 
 
 # If this becomes common, then should work on a more satisfying way
@@ -374,11 +370,30 @@ class SurroundedAndReflectPositionDistribution(Distribution):
             else self.reflect_distribution.generate()
         )
 
-    @property
-    def n_tasks(self):
-        return inf
-
 
 register_distribution(
     "surrounded_and_reflect", SurroundedAndReflectPositionDistribution
 )
+
+
+class MultiDistribution(Distribution):
+    """Retrieve multiple distributions from the registry and sample them with weights.
+
+    Requires keys 'dists' and 'p' which is a list of distributions, and their sample probability.
+    """
+
+    def __init__(self, config):
+        self.p: list[float] = config["p"]
+        self.dists: list[Distribution] = [
+            get_distribution(d)(config) for d in config["dists"]
+        ]
+        assert len(self.p) == len(self.dists)
+        assert sum(self.p) == 1, "Probs don't add up!"
+        self.rng = default_rng()
+
+    def generate(self) -> Dict[str, Any]:
+        index = np.random.choice(len(self.dists), p=self.p)
+        return self.dists[index].generate()
+
+
+register_distribution("multi", MultiDistribution)
